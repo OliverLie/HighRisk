@@ -151,6 +151,37 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: -6019606389940297579, guid: c12e077ef5806fd4380639c5b27d6010, type: 3}
+--- !u!1 &7208072
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7208073}
+  m_Layer: 0
+  m_Name: Reference
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7208073
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7208072}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -860.68835, y: -466.93, z: 32.09536}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 932916186}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &15053059
 GameObject:
   m_ObjectHideFlags: 0
@@ -14442,6 +14473,7 @@ GameObject:
   - component: {fileID: 932916185}
   - component: {fileID: 932916184}
   - component: {fileID: 932916183}
+  - component: {fileID: 932916187}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -14525,6 +14557,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 383863542}
+  - {fileID: 7208073}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -14532,6 +14565,21 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &932916187
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 932916182}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89ea41eb42e734001936422795bde2b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  reference: {fileID: 7208073}
+  player: {fileID: 1348024869}
+  mytext: {fileID: 383863543}
 --- !u!1 &941195275 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3810502754094292817, guid: cef60d5bcb7680c48b3be39a0fe0c982, type: 3}

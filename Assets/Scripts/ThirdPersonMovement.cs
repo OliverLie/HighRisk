@@ -15,7 +15,7 @@ public class ThirdPersonMovement : MonoBehaviour
 
     [Header("Jump & Gravity")]
     public float gravity = -9.81f;
-    public float jumpHeight = 2f;
+    public float jumpHeight = 3f;
 
     [Header("Glide Settings")]
     public float glideFriction = 1f;

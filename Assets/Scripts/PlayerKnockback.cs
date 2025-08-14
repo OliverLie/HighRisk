@@ -11,6 +11,7 @@ public class PlayerKnockback : MonoBehaviour
     void Start()
     {
         controller = GetComponent<CharacterController>();
+
     }
 
     void Update()
