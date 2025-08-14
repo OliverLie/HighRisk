@@ -2,118 +2,166 @@ using UnityEngine;
 
 public class ThirdPersonMovement : MonoBehaviour
 {
+    [Header("References")]
     public CharacterController controller;
-
-    public float speed = 6f;
-    public float turnSmoothTime = 0.1f;
-    float turnSmoothVelocity;
-
     public Transform cam;
+    public Animator animator; // Base layer: 2D Blend Tree, Jump layer: Jump animation
 
+    [Header("Movement Settings")]
+    public float walkSpeed = 6f;
+    public float sprintMultiplier = 1.5f;
+    public float turnSmoothTime = 0.1f;
+    private float turnSmoothVelocity;
+
+    [Header("Jump & Gravity")]
     public float gravity = -9.81f;
     public float jumpHeight = 2f;
 
-    Vector3 velocity;
-    Vector3 externalVelocity;
+    [Header("Glide Settings")]
+    public float glideFriction = 1f;
 
-    bool isGrounded;
+    // Animation blend tree input
+    private float moveX; // Lokal strafe (venstre/højre)
+    private float moveY; // Lokal frem/tilbage
 
-    bool isGliding = false;
-    float glideFriction = 1f;  // Jo højere, jo hurtigere stopper glidebevægelsen
-    Vector3 glideVelocity = Vector3.zero;
+    private Vector3 velocity;
+    private Vector3 externalVelocity;
+    private Vector3 glideVelocity;
+    private bool isGrounded;
+    private bool isGliding;
+    private bool isJumping; // Lokalt flag til animation
 
-    void Start()
+    private void Start()
     {
         Cursor.lockState = CursorLockMode.Locked;
         controller = GetComponent<CharacterController>();
     }
 
-    void Update()
+    private void Update()
     {
         isGrounded = controller.isGrounded;
+        HandleGroundCheck();
+        HandleInput();
+        ApplyGravity();
+        ApplyVerticalMovement();
 
-        if (isGrounded && velocity.y < 0)
+        // Send til Animator (2D Blend Tree)
+        if (animator != null)
         {
-            velocity.y = -2f;
-            externalVelocity = Vector3.zero;
-
-            // Stop glide når man er på jorden og ikke i glide-zone
-            if (!isGliding)
-                glideVelocity = Vector3.zero;
+            animator.SetFloat("MoveX", moveX);
+            animator.SetFloat("MoveY", moveY);
+            animator.SetBool("IsJumping", isJumping); // Send jump-status til jump layer
         }
+    }
 
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
-        Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
+    #region Core Movement
+    private void HandleInput()
+    {
+        float h = Input.GetAxisRaw("Horizontal");
+        float v = Input.GetAxisRaw("Vertical");
+        Vector3 inputDir = new Vector3(h, 0f, v).normalized;
 
-        if (direction.magnitude >= 0.1f)
+        // Bestem sprint status
+        bool isSprinting = Input.GetKey(KeyCode.LeftShift) && inputDir.magnitude >= 0.1f;
+        float speedMultiplier = isSprinting ? sprintMultiplier : 1f;
+
+        if (inputDir.magnitude >= 0.1f)
         {
-            float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
-            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
-            transform.rotation = Quaternion.Euler(0f, angle, 0f);
-
-            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
-
-            if (!isGliding)
-            {
-                controller.Move(moveDir.normalized * speed * Time.deltaTime);
-            }
+            RotateTowardsCameraDirection();
+            if (isGliding)
+                HandleGlideMovement(inputDir);
             else
-            {
-                // Hvis man glider, kan man stadig styre lidt, men glideVelocity er vigtigst
-                Vector3 glideMove = glideVelocity * Time.deltaTime;
-                Vector3 inputMove = moveDir.normalized * speed * 0.5f * Time.deltaTime; // Halv kontrol
-                controller.Move(glideMove + inputMove);
-
-                // Glide friktion - sæt glideVelocity gradvist mod 0
-                glideVelocity = Vector3.Lerp(glideVelocity, Vector3.zero, glideFriction * Time.deltaTime);
-
-                // Stop glide når glideVelocity er meget lav
-                if (glideVelocity.magnitude < 0.1f)
-                {
-                    StopGlide();
-                }
-            }
+                MoveNormal(inputDir, speedMultiplier);
         }
         else
         {
-            // Ingen input
-            if (!isGliding)
-            {
-                // Bare stå stille, uden glidebevægelse
-                controller.Move(Vector3.zero);
-            }
-            else
-            {
-                // Når man glider uden input
-                Vector3 glideMove = glideVelocity * Time.deltaTime;
-                controller.Move(glideMove);
-
-                glideVelocity = Vector3.Lerp(glideVelocity, Vector3.zero, glideFriction * Time.deltaTime);
-
-                if (glideVelocity.magnitude < 0.1f)
-                {
-                    StopGlide();
-                }
-            }
+            HandleIdleMovement();
         }
 
+        // Hop input
         if (isGrounded && Input.GetButtonDown("Jump"))
         {
-            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
-            StopGlide();  // Stop glide når man hopper
+            Jump();
+            isJumping = true; // Starter jump animationen
         }
-
-        velocity.y += gravity * Time.deltaTime;
-
-        // Y-aksens bevægelse (jump/gravity)
-        controller.Move(new Vector3(0, velocity.y, 0) * Time.deltaTime);
     }
 
-    public void StartGlide(Vector3 initialGlideVelocity)
+    private void RotateTowardsCameraDirection()
+    {
+        float targetAngle = cam.eulerAngles.y;
+        float smoothedAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
+        transform.rotation = Quaternion.Euler(0f, smoothedAngle, 0f);
+    }
+
+    private void MoveNormal(Vector3 inputDir, float speedMultiplier)
+    {
+        Vector3 worldMove = CameraRelativeDirection(inputDir);
+        Vector3 localMove = transform.InverseTransformDirection(worldMove);
+
+        moveX = Mathf.Lerp(moveX, localMove.x * speedMultiplier, Time.deltaTime * 10f);
+        moveY = Mathf.Lerp(moveY, localMove.z * speedMultiplier, Time.deltaTime * 10f);
+
+        controller.Move(worldMove * walkSpeed * speedMultiplier * Time.deltaTime);
+    }
+
+    private void HandleGlideMovement(Vector3 inputDir)
+    {
+        Vector3 worldMove = CameraRelativeDirection(inputDir);
+        Vector3 localMove = transform.InverseTransformDirection(worldMove);
+
+        moveX = Mathf.Lerp(moveX, localMove.x * 0.5f, Time.deltaTime * 10f);
+        moveY = Mathf.Lerp(moveY, localMove.z * 0.5f, Time.deltaTime * 10f);
+
+        Vector3 glideMove = glideVelocity * Time.deltaTime;
+        Vector3 inputMove = worldMove * (walkSpeed * 0.5f) * Time.deltaTime;
+
+        controller.Move(glideMove + inputMove);
+        ApplyGlideFriction();
+    }
+
+    private void HandleIdleMovement()
+    {
+        moveX = Mathf.Lerp(moveX, 0f, Time.deltaTime * 10f);
+        moveY = Mathf.Lerp(moveY, 0f, Time.deltaTime * 10f);
+
+        if (!isGliding)
+        {
+            controller.Move(Vector3.zero);
+        }
+        else
+        {
+            controller.Move(glideVelocity * Time.deltaTime);
+            ApplyGlideFriction();
+        }
+    }
+
+    private Vector3 CameraRelativeDirection(Vector3 inputDir)
+    {
+        Vector3 camForward = cam.forward;
+        Vector3 camRight = cam.right;
+
+        camForward.y = 0f;
+        camRight.y = 0f;
+
+        camForward.Normalize();
+        camRight.Normalize();
+
+        return (camForward * inputDir.z + camRight * inputDir.x).normalized;
+    }
+    #endregion
+
+    #region Glide
+    private void ApplyGlideFriction()
+    {
+        glideVelocity = Vector3.Lerp(glideVelocity, Vector3.zero, glideFriction * Time.deltaTime);
+        if (glideVelocity.magnitude < 0.1f)
+            StopGlide();
+    }
+
+    public void StartGlide(Vector3 initialVelocity)
     {
         isGliding = true;
-        glideVelocity = initialGlideVelocity;
+        glideVelocity = initialVelocity;
     }
 
     public void StopGlide()
@@ -121,16 +169,51 @@ public class ThirdPersonMovement : MonoBehaviour
         isGliding = false;
         glideVelocity = Vector3.zero;
     }
+    #endregion
 
+    #region Jump & Gravity
+    private void HandleGroundCheck()
+    {
+        if (isGrounded && velocity.y < 0)
+        {
+            velocity.y = -2f;
+            externalVelocity = Vector3.zero;
+
+            // Stop jump animation, hvis vi er landet
+            if (isJumping)
+                isJumping = false;
+
+            if (!isGliding)
+                glideVelocity = Vector3.zero;
+        }
+    }
+
+    private void Jump()
+    {
+        velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+        StopGlide();
+    }
+
+    private void ApplyGravity()
+    {
+        velocity.y += gravity * Time.deltaTime;
+    }
+
+    private void ApplyVerticalMovement()
+    {
+        controller.Move(new Vector3(0, velocity.y, 0) * Time.deltaTime);
+    }
+    #endregion
+
+    #region External Forces
     public void AddExternalVelocity(Vector3 force)
     {
         externalVelocity += force;
     }
 
-
     public void SetVerticalVelocity(float newYVelocity)
     {
-    velocity.y = newYVelocity;
+        velocity.y = newYVelocity;
     }
-
+    #endregion
 }
