@@ -15,6 +15,9 @@ public class TriggerZoneSpawner : MonoBehaviour
     private bool isSpikesActive = false;
 
     [SerializeField] float DestroyTime = 10f;
+    [SerializeField] private float launchForce = 10f;
+    [SerializeField] private float knockbackDuration = 0.5f;
+
 
     private void OnTriggerEnter(Collider other)
     {
@@ -77,5 +80,19 @@ public class TriggerZoneSpawner : MonoBehaviour
         // Hvis alle spikes er destroyed, sæt isSpikesActive = false så man kan spawne igen
         if (spawnedSpikes.Count == 0)
             isSpikesActive = false;
+    }
+
+
+     private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (hit.gameObject.CompareTag("Player"))
+        {
+            ThirdPersonMovement player = hit.gameObject.GetComponent<ThirdPersonMovement>();
+            if (player != null)
+            {
+                Vector3 dir = (hit.transform.position - transform.position).normalized;
+                player.Knockback(dir, launchForce, knockbackDuration);
+            }
+        }
     }
 }

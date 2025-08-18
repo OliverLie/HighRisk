@@ -30,6 +30,8 @@ public class ThirdPersonMovement : MonoBehaviour
     private bool isGrounded;
     private bool isGliding;
     private bool isJumping; // Lokalt flag til animation
+    private bool isKnockedback = false;
+    private float knockbackTimer = 0f;
 
     private void Start()
     {
@@ -120,20 +122,20 @@ public class ThirdPersonMovement : MonoBehaviour
     }
 
     private void HandleIdleMovement()
-    {
-        moveX = Mathf.Lerp(moveX, 0f, Time.deltaTime * 10f);
-        moveY = Mathf.Lerp(moveY, 0f, Time.deltaTime * 10f);
+{
+    moveX = Mathf.Lerp(moveX, 0f, Time.deltaTime * 10f);
+    moveY = Mathf.Lerp(moveY, 0f, Time.deltaTime * 10f);
 
-        if (!isGliding)
-        {
-            controller.Move(Vector3.zero);
-        }
-        else
-        {
-            controller.Move(glideVelocity * Time.deltaTime);
-            ApplyGlideFriction();
-        }
+    if (!isGliding)
+    {
+        controller.Move(Vector3.zero);
     }
+    else
+    {
+        controller.Move(glideVelocity * Time.deltaTime);
+        ApplyGlideFriction();
+    }
+}
 
     private Vector3 CameraRelativeDirection(Vector3 inputDir)
     {
@@ -202,6 +204,7 @@ public class ThirdPersonMovement : MonoBehaviour
     private void ApplyVerticalMovement()
     {
         controller.Move(new Vector3(0, velocity.y, 0) * Time.deltaTime);
+        
     }
     #endregion
 
@@ -209,11 +212,24 @@ public class ThirdPersonMovement : MonoBehaviour
     public void AddExternalVelocity(Vector3 force)
     {
         externalVelocity += force;
+        
     }
 
     public void SetVerticalVelocity(float newYVelocity)
     {
         velocity.y = newYVelocity;
+        
+    }
+
+
+
+    public void Knockback(Vector3 direction, float force, float duration)
+    {
+        isKnockedback = true;
+        knockbackTimer = duration;
+
+        direction.y = 1f; // giv et hop opad
+        velocity = direction.normalized * force;
     }
     #endregion
 }

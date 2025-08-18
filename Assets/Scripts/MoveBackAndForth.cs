@@ -14,6 +14,8 @@ public class MoveBackAndForthWithPush : MonoBehaviour
 
     private Vector3 lastPosition;
 
+    
+
     void Start()
     {
         if (pointA == null || pointB == null)
