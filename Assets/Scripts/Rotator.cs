@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Rotator : MonoBehaviour
+public class RotatorOwn : MonoBehaviour
 {
 
     [SerializeField] float xValue = 0f;

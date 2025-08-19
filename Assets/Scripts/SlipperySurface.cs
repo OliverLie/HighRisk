@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class SlipperySurface : MonoBehaviour
 {
-    public float glideSpeed = 6f;
+    public float glideSpeed = 25f;
 
     private void OnTriggerEnter(Collider other)
     {
